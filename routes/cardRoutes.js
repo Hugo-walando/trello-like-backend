@@ -58,19 +58,16 @@ router.get('/:boardId', authMiddleware, async (req, res) => {
 // Modifier le statut d'une carte
 router.put('/:cardId', authMiddleware, async (req, res) => {
   try {
-    const { status } = req.body;
     const { cardId } = req.params;
+    const { title, status } = req.body; // Ici, title est la nouvelle valeur, et status est optionnel
 
-    if (!['todo', 'in-progress', 'done'].includes(status)) {
-      return res.status(400).json({ message: 'Statut invalide' });
-    }
-
+    // On récupère la carte
     const card = await Card.findById(cardId);
     if (!card) {
       return res.status(404).json({ message: 'Carte non trouvée' });
     }
 
-    // Vérifier si la carte appartient bien à un tableau de l'utilisateur
+    // Vérifier que le tableau auquel appartient la carte est bien celui de l'utilisateur connecté
     const board = await Board.findOne({
       _id: card.boardId,
       userId: req.user.userId,
@@ -79,11 +76,45 @@ router.put('/:cardId', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Accès interdit' });
     }
 
-    card.status = status;
-    await card.save();
+    // Mettre à jour les champs souhaités
+    if (title) card.title = title;
+    // On peut aussi autoriser la mise à jour du statut si besoin
+    if (status && ['todo', 'in-progress', 'done'].includes(status)) {
+      card.status = status;
+    }
 
+    await card.save();
     res.json(card);
   } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur', error });
+  }
+});
+
+router.delete('/:cardId', authMiddleware, async (req, res) => {
+  try {
+    const { cardId } = req.params;
+
+    // Récupérer la carte
+    const card = await Card.findById(cardId);
+    if (!card) {
+      return res.status(404).json({ message: 'Carte non trouvée' });
+    }
+
+    // Vérifier que le tableau associé appartient bien à l'utilisateur connecté
+    const board = await Board.findOne({
+      _id: card.boardId,
+      userId: req.user.userId,
+    });
+    if (!board) {
+      return res.status(403).json({ message: 'Accès interdit au tableau' });
+    }
+
+    // Supprimer la carte
+    await Card.findByIdAndDelete(cardId); // Utilisation de findByIdAndDelete au lieu de card.remove()
+
+    res.json({ message: 'Carte supprimée avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression de la carte :', error);
     res.status(500).json({ message: 'Erreur serveur', error });
   }
 });
