@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
+const authMiddleware = require('../middleswares/authMiddleware');
 
 const router = express.Router();
 
@@ -75,6 +76,24 @@ router.post('/login', async (req, res) => {
     res.status(200).json({ message: 'Connexion réussie', token });
   } catch (error) {
     console.error('Erreur lors de la connexion :', error);
+    res.status(500).json({ message: 'Erreur du serveur' });
+  }
+});
+
+router.get('/profile', authMiddleware, async (req, res) => {
+  try {
+    // Ici, tu peux récupérer l'utilisateur de la base de données en utilisant req.userId
+    console.log('User dans la route:', req.user);
+
+    const user = await User.findById(req.user.userId);
+
+    // Si l'utilisateur est trouvé, on renvoie ses informations
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    res.json({ username: user.username, email: user.email });
+  } catch (err) {
     res.status(500).json({ message: 'Erreur du serveur' });
   }
 });
