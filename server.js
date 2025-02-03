@@ -2,6 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const authRoutes = require('./routes/authRoutes');
 
 // Charger les variables d’environnement
 dotenv.config();
@@ -18,6 +19,7 @@ connectDB()
 const app = express();
 app.use(express.json()); // Pour lire du JSON dans les requêtes
 app.use(cors()); // Autoriser les requêtes CORS
+app.use('/api/auth', authRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
