@@ -98,4 +98,36 @@ router.get('/profile', authMiddleware, async (req, res) => {
   }
 });
 
+router.put('/:cardId', authMiddleware, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const { cardId } = req.params;
+
+    if (!['todo', 'in-progress', 'done'].includes(status)) {
+      return res.status(400).json({ message: 'Statut invalide' });
+    }
+
+    const card = await Card.findById(cardId);
+    if (!card) {
+      return res.status(404).json({ message: 'Carte non trouvée' });
+    }
+
+    // Vérifier que le tableau auquel appartient la carte appartient bien à l'utilisateur
+    const board = await Board.findOne({
+      _id: card.boardId,
+      userId: req.user.userId,
+    });
+    if (!board) {
+      return res.status(403).json({ message: 'Accès interdit' });
+    }
+
+    card.status = status;
+    await card.save();
+
+    res.json(card);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur', error });
+  }
+});
+
 module.exports = router;
